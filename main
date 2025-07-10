@@ -1,0 +1,70 @@
+#include <Servo.h>
+
+// === CONFIGURAÇÕES DE PINOS ===
+const int servoPin = 9;       // Pino conectado ao servo
+const int buttonPin = 2;      // Pino conectado ao botão
+
+// === ANGULAÇÕES DO BATIMENTO ===
+const int angleNormal = 90;
+const int angleSystole = 60;
+const int angleDiastole = 120;
+
+// === FREQUÊNCIA DE BATIMENTO COM SOPRO ===
+const int bpmMurmur = 90;
+
+// === VARIÁVEIS DE ESTADO ===
+bool isActive = false;                // Estado atual da simulação
+bool lastButtonState = LOW;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 50;
+
+Servo heartServo;
+
+void setup() {
+  pinMode(buttonPin, INPUT_PULLUP);   // Usa pull-up interno
+  heartServo.attach(servoPin);        
+  heartServo.write(angleNormal);      // Posição neutra
+
+  Serial.begin(9600);
+  Serial.println("Pronto. Pressione o botão para iniciar/parar a simulação.");
+}
+
+void loop() {
+  // === LEITURA DO BOTÃO COM DEBOUNCE ===
+  int reading = digitalRead(buttonPin);
+
+  if (reading != lastButtonState) {
+    lastDebounceTime = millis(); // Reinicia temporizador
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // Se o botão mudou de estado e está pressionado
+    if (reading == LOW && lastButtonState == HIGH) {
+      isActive = !isActive; // Alterna o estado
+      Serial.println(isActive ? "Simulação ativada" : "Simulação parada");
+    }
+  }
+
+  lastButtonState = reading;
+
+  // === SIMULAÇÃO DE BATIMENTO COM SOPRO ===
+  if (isActive) {
+    simulateMurmurBeat();
+  } else {
+    heartServo.write(angleNormal); // Fica parado no centro
+  }
+}
+
+// === FUNÇÃO DE SIMULAÇÃO DO SOPRO CARDÍACO ===
+void simulateMurmurBeat() {
+  int delayTime = 60000 / bpmMurmur; // Tempo total de um ciclo de batimento
+
+  heartServo.write(angleSystole - random(5, 15));  // Contração incompleta
+  delay(delayTime / 4);
+
+  heartServo.write(angleDiastole + random(5, 10)); // Relaxamento exagerado
+  delay(delayTime / 4);
+
+  heartServo.write(angleNormal + random(-5, 5));   // Retorno com pequenas variações
+  delay(delayTime / 2);
+}
